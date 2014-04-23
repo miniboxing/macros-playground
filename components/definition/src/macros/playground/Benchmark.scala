@@ -19,11 +19,17 @@ object Benchmark {
     import c.universe._
 
     val tree = c.parse("""
-      class C {
-        def foo = "foo"
+      object BenchmarkedClass {
+        class C[@specialized T] {
+          def foo = this.getClass.toString
+        }
       }
+
+      import BenchmarkedClass._
+
       def print_foo(): Unit =
-        println((new C).foo)
+        println((new C[Int]).foo)
+
       print_foo()
     """)
 
