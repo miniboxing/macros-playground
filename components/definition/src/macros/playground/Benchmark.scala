@@ -18,45 +18,38 @@ object Benchmark {
   def benchmark_impl(c: Context)(tpe: c.Expr[BenchType]): c.Expr[Unit] = {
     import c.universe._
 
-    val tree = c.parse("""
-      object BenchmarkedClass {
-        class C[@specialized T] {
-          def foo = this.getClass.toString
+    val parameter: TypeDef = tpe.tree match {
+      case q"Benchmark.BenchType.Generic"     => q"type T"
+      case q"Benchmark.BenchType.Miniboxed"   => q"@miniboxed type T"
+      case q"Benchmark.BenchType.Specialized" => q"@specialized type T"
+    }
+
+    val target: Tree = q"""
+      object BenchmarkTarget {
+        class C[$parameter] {
+          def foo() = this.getClass.toString
         }
       }
+    """
 
-      import BenchmarkedClass._
+    val benchmarks: List[Tree] =
+      for (T <- List(tq"Int", tq"String", tq"Long")) yield {
+        val benchTitle = "Benchmark for " + tpe.tree.symbol.name + " with " + T.name.toString + ":  "
+        val benchString = c.parse("\"" + benchTitle + "\"")
 
-      def print_foo(): Unit =
-        println((new C[Int]).foo)
+        q"""
+          import BenchmarkTarget._
 
-      print_foo()
-    """)
+          val c = new C[$T]
+          println($benchString + c.foo())
+        """
+      }
+
+    val tree = q"""
+      $target
+      ..$benchmarks
+    """
 
     c.Expr[Unit](tree)
   }
-
-//  def printf(format: String, params: Any*): Unit = macro printf_impl
-//
-//  def printf_impl(c: Context)(format: c.Expr[String], params: c.Expr[Any]*): c.Expr[Unit] = {
-//    import c.universe._
-//    val Literal(Constant(s_format: String)) = format.tree
-//    val evals = ListBuffer[ValDef]()
-//
-//    def precompute(value: Tree, tpe: Type): Ident = {
-//      val freshName = newTermName(c.fresh("eval$"))
-//      evals += ValDef(Modifiers(), freshName, TypeTree(tpe), value)
-//      Ident(freshName)
-//    }
-//
-//    val paramsStack = Stack[Tree]((params map (_.tree)): _*)
-//    val refs = s_format.split("(?<=%[\\w%])|(?=%[\\w%])") map {
-//      case "%d" => precompute(paramsStack.pop, typeOf[Int])
-//      case "%s" => precompute(paramsStack.pop, typeOf[String])
-//      case "%%" => Literal(Constant("%"))
-//      case part => Literal(Constant(part))
-//    }
-//    val stats = evals ++ refs.map(ref => reify(print(c.Expr[Any](ref).splice)).tree)
-//    c.Expr[Unit](Block(stats.toList, Literal(Constant(()))))
-//  }
 }

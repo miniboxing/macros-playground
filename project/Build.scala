@@ -7,6 +7,7 @@ import Process._
 object MiniboxingBuild extends Build {
 
   val scalaVer = "2.10.4"
+  val paradiseVersion = "2.0.0"
 
   val defaults = Defaults.defaultSettings ++ Seq(
     scalaVersion := scalaVer,
@@ -45,6 +46,13 @@ object MiniboxingBuild extends Build {
       "org.scala-lang" % "scala-compiler" % scalaVer,
       // "org.scala-lang" % "scala-partest" % scalaVer,
       "com.googlecode.java-diff-utils" % "diffutils" % "1.2.1"
+    ),
+
+    // macros paradise:
+    addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full),
+    libraryDependencies ++= (
+      if (scalaVersion.value.startsWith("2.10")) List("org.scalamacros" %% "quasiquotes" % paradiseVersion)
+      else Nil
     )
   )
 

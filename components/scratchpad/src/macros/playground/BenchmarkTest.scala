@@ -6,6 +6,6 @@ object BenchmarkTest {
     import Benchmark._
     import BenchType._
 
-    benchmark(Generic)
+    benchmark(Specialized)
   }
 }
